@@ -17,7 +17,7 @@ APKDeepLens is a Python-based tool that performs various operations on APK files
 
 - **APK Analysis** -> Scans Android application package (APK) files for security vulnerabilities.
 - **OWASP Coverage** -> Covers OWASP Top 10 vulnerabilities to ensure a comprehensive security assessment.
-- **Advanced Detection** -> Utilizes Androguard for APK file analysis and vulnerability detection.
+- **Advanced Detection** -> Utilizes custom python code for APK file analysis and vulnerability detection.
 - **Sensitive Information Extraction** -> Identifies potential security risks by extracting sensitive information from APK files, such as insecure authentication/authorization keys and insecure request protocols.
 - **In-depth Analysis** -> Detects insecure data storage practices, including data related to the SD card, and highlights the use of insecure request protocols in the code.
 - **Intent Filter Exploits** -> Pinpoint vulnerabilities by analyzing intent filters extracted from AndroidManifest.xml.
