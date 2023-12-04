@@ -36,7 +36,13 @@ class util:
     UNDERLINE = '\033[4m'
 
     def mod_print(text_output, color):
-        print(color + "{}".format(text_output) + util.ENDC)
+        """
+        Better mod print. It gives the line number, file name in which error occured. 
+        """
+        stack = traceback.extract_stack()
+        filename, line_no, func_name, text = stack[-2]
+        formatted_message = f"{filename}:{line_no}: {text_output}"
+        print(color + formatted_message + util.ENDC)
 
     def mod_log(text, color):
         logging.info(color + "{}".format(text) + util.ENDC)
