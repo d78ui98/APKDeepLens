@@ -1,17 +1,18 @@
 import os
 import subprocess
 import re
+from xhtml2pdf import pisa
 import xml.etree.ElementTree as ET
 import datetime
 import logging
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
 """
-    Title:      APKaleidoscope
+    Title:      APKDeepLens
     Desc:       Android security insights in full spectrum.
     Author:     Deepanshu Gajbhiye
     Version:    1.0.0
-    GitHub URL: https://github.com/d78ui98/APKaleidoscope/
+    GitHub URL: https://github.com/d78ui98/APKDeepLens
 """
 
 class util:
@@ -36,10 +37,11 @@ class util:
 
 class ReportGen(object):
 
-    def __init__(self, manifest, res_path, source_path, template_path):
+    def __init__(self, apk_name, manifest, res_path, source_path, template_path):
         """
         Defining few important variables which are used throughout the class.
         """
+        self.apk_name = apk_name
         self.manifest = manifest
         self.res_path = res_path
         self.source_path = source_path
@@ -254,3 +256,76 @@ class ReportGen(object):
         except Exception as e:
             util.mod_log(f"[-] ERROR in extract_dangerous_permissions: {str(e)}", util.FAIL)
             return []
+
+    def convert_html_to_pdf(self, html_file, pdf_name):
+        """
+        Convert an HTML file to a PDF.
+        """
+        # read content from html report
+        read_obj = open(html_file, 'r')
+        source_html = read_obj.read()
+        read_obj.close()
+
+        # write content from html report to pdf
+        result_file = open(pdf_name, "w+b")
+        pisa.CreatePDF(
+                source_html,                
+                dest=result_file)           
+        result_file.close()
+    
+    def clean_apk_name(self, apk_name):
+        """
+        This function removes 'com' and 'apk' parts from the apk_name if they exist.
+        """
+        cleaned_name = re.sub(r'(\.com|\.apk)', '', apk_name)
+        return cleaned_name
+
+    def generate_html_pdf_report(self):
+        """
+        This the function generates an html and pdf report using functions mentioned in report_gen.py
+        """
+
+        try:
+            # Creating object for report generation module.
+
+            manifest = self.manifest
+            res_path = self.res_path
+            source_path = self.source_path
+            template_path = self.template_path
+            apk_name = self.apk_name
+
+            obj = ReportGen(apk_name, manifest, res_path, source_path, template_path)
+            permissions  = obj.extract_permissions(manifest)
+            dangerous_permission = obj.extract_dangerous_permissions(manifest)
+
+            html_dict = {}
+            html_dict['build'] = obj.get_build_information()
+            html_dict['package_name'] = manifest.attrib['package']
+            html_dict['android_version'] = manifest.attrib['android:versionCode']
+            html_dict['date'] = datetime.datetime.today().strftime('%d/%m/%Y')
+            html_dict['permissions'] = permissions
+            html_dict['dangerous_permission'] = dangerous_permission
+            html_dict['intent_grep'] = obj.grep_keyword('intent')
+            html_dict['internal_storage_grep'] = obj.grep_keyword('internal_storage')
+            html_dict['external_storage_grep'] = obj.grep_keyword('external_storage')
+            #print(html_dict)
+
+            # Ensure 'reports' directory exists
+            if not os.path.exists('reports'):
+                os.makedirs('reports')
+
+            # Generating the html report
+            report_content = obj.render_template('report_template.html', html_dict)
+            cleaned_apk_name = obj.clean_apk_name(self.apk_name)
+            html_report_path = "reports/report_{}.html".format(cleaned_apk_name)
+            obj.grenerate_html_report(report_content, html_report_path)
+            util.mod_print("[+] Generated HTML report - {}".format(html_report_path), util.OKCYAN)
+
+            # Converting html report to pdf.
+            pdf_name = f"report_{cleaned_apk_name}.pdf"
+            pdf_path = "reports/{}".format(pdf_name)
+            obj.convert_html_to_pdf(html_report_path, pdf_path)
+            util.mod_print("[+] Generated PDF report - {}".format(pdf_path), util.OKCYAN)
+
+        except Exception as e:
+            util.mod_print(f"[-] {str(e)}", util.FAIL)

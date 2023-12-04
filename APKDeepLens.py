@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 import re
-from xhtml2pdf import pisa
 import logging
 import argparse
 import time 
@@ -252,29 +251,6 @@ class AutoApkScanner(object):
         Check if the apk file exists or not.
         '''
         return os.path.isfile(apk_filename)
-    
-    def convert_html_to_pdf(self, html_file, pdf_name):
-        """
-        Convert an HTML file to a PDF.
-        """
-        # read content from html report
-        read_obj = open(html_file, 'r')
-        source_html = read_obj.read()
-        read_obj.close()
-
-        # write content from html report to pdf
-        result_file = open(pdf_name, "w+b")
-        pisa.CreatePDF(
-                source_html,                
-                dest=result_file)           
-        result_file.close()                 
-    
-    def clean_apk_name(self, apk_name):
-        """
-        This function removes 'com' and 'apk' parts from the apk_name if they exist.
-        """
-        cleaned_name = re.sub(r'(\.com|\.apk)', '', apk_name)
-        return cleaned_name
 
 if __name__ == "__main__":
     try:
@@ -357,53 +333,17 @@ if __name__ == "__main__":
             script_dir = os.path.dirname(os.path.abspath(__file__))
             template_path = os.path.join(script_dir, "report_template.html")
 
-            try:
-                # Reading the android manifest file.
-                android_manifest_path = os.path.join(res_path, "AndroidManifest.xml")
-                etparse = ET.parse(android_manifest_path)
-                manifest = etparse.getroot()
+            # Reading the android manifest file.
+            android_manifest_path = os.path.join(res_path, "AndroidManifest.xml")
+            etparse = ET.parse(android_manifest_path)
+            manifest = etparse.getroot()
+            # Update the attributes by stripping out the namespace
+            for elem in manifest.iter():
+                elem.attrib = {k.replace('{http://schemas.android.com/apk/res/android}', 'android:'): v for k, v in elem.attrib.items()}
 
-                # Update the attributes by stripping out the namespace
-                for elem in manifest.iter():
-                    elem.attrib = {k.replace('{http://schemas.android.com/apk/res/android}', 'android:'): v for k, v in elem.attrib.items()}
-
-                # Creating object for report generation module.
-                obj = ReportGen(manifest, res_path, source_path, template_path)
-
-                permissions  = obj.extract_permissions(manifest)
-                dangerous_permission = obj.extract_dangerous_permissions(manifest)
-
-                html_dict = {}
-                html_dict['build'] = obj.get_build_information()
-                html_dict['package_name'] = manifest.attrib['package']
-                html_dict['android_version'] = manifest.attrib['android:versionCode']
-                html_dict['date'] = datetime.datetime.today().strftime('%d/%m/%Y')
-                html_dict['permissions'] = permissions
-                html_dict['dangerous_permission'] = dangerous_permission
-                html_dict['intent_grep'] = obj.grep_keyword('intent')
-                html_dict['internal_storage_grep'] = obj.grep_keyword('internal_storage')
-                html_dict['external_storage_grep'] = obj.grep_keyword('external_storage')
-                #print(html_dict)
-
-                # Ensure 'reports' directory exists
-                if not os.path.exists('reports'):
-                    os.makedirs('reports')
-
-                # Generating the html report
-                report_content = obj.render_template('report_template.html', html_dict)
-                cleaned_apk_name = obj_self.clean_apk_name(apk_name)
-                html_report_path = "reports/report_{}.html".format(cleaned_apk_name)
-                obj.grenerate_html_report(report_content, html_report_path)
-                util.mod_print("[+] Generated HTML report - {}".format(html_report_path), util.OKCYAN)
-
-                # Converting html report to pdf.
-                pdf_name = f"report_{cleaned_apk_name}.pdf"
-                pdf_path = "reports/{}".format(pdf_name)
-                obj_self.convert_html_to_pdf(html_report_path, pdf_path)
-                util.mod_print("[+] Generated PDF report - {}".format(pdf_path), util.OKCYAN)
-
-            except Exception as e:
-                print(str(e))
+            # Creating object for report generation module.
+            obj = ReportGen(apk_name, manifest, res_path, source_path, template_path)
+            obj.generate_html_pdf_report()
         
     except Exception as e:
         util.mod_print(f"[-] {str(e)}", util.FAIL)
