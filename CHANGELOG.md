@@ -4,6 +4,10 @@ All the notable changes to this project will be documented in this file.
 
 ## [Released]
 
+## [1.0.2] - 2023-12-5
+- Better structuring of project be seperating code for android manifest analysis and report generation
+- updated debugging methods
+
 ## [1.0.1] - 2023-08-16
 - Optimized code to improve speed
 - Added better support for windows
