@@ -41,19 +41,24 @@ class SensitiveInfoExtractor(object):
         """
         all_sensitive_info_list = []
         indent = "    "
+
+        excluded_extensions = ['.ttf', '.otf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.dex', '.gradle']
+
         try:
-            for file in list_of_files: 
-                read = open(file, "r", encoding='utf-8', errors='ignore').read() 
-                types_ioc_list = self.extract(read) 
-                #fetching relative path
-                real_relative_path = os.path.relpath(file, relative_path)
-                for items in types_ioc_list:
-                    print(indent + items)
-                    items = "{}: {}".format(real_relative_path, items)
-                    all_sensitive_info_list.append(items)
+            for file in list_of_files:
+                _, file_extension = os.path.splitext(file)
+                if file_extension.lower() not in excluded_extensions:
+                    read = open(file, "r", encoding='utf-8', errors='ignore').read() 
+                    types_ioc_list = self.extract(read) 
+                    #fetching relative path
+                    real_relative_path = os.path.relpath(file, relative_path)
+                    for items in types_ioc_list:
+                        print(indent + items + " + " + real_relative_path)
+                        items = "{}: {}".format(real_relative_path, items)
+                        all_sensitive_info_list.append(items)
             #return all_sensitive_info_list
         except Exception as e:
-            return str(e) 
+            return str(e)
     
     def extract_insecure_request_protocol(self, list_of_files):
         """
