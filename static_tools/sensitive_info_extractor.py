@@ -1,5 +1,6 @@
 import os
 import re
+from .utility.utility_class import util
 
 """
     Title:      APKDeepLens
@@ -53,12 +54,18 @@ class SensitiveInfoExtractor(object):
                     #fetching relative path
                     real_relative_path = os.path.relpath(file, relative_path)
                     for items in types_ioc_list:
-                        print(indent + items + " + " + real_relative_path)
+                        print(indent + items)
+                        ioc_and_type = items.split()
+                        secret_info = {
+                            "type":ioc_and_type[0],
+                            "ioc":ioc_and_type[1],
+                            "path": real_relative_path
+                        }
+                        all_sensitive_info_list.append(secret_info)
                         items = "{}: {}".format(real_relative_path, items)
-                        all_sensitive_info_list.append(items)
-            #return all_sensitive_info_list
+            return all_sensitive_info_list
         except Exception as e:
-            return str(e)
+            return str(e) 
     
     def extract_insecure_request_protocol(self, list_of_files):
         """
@@ -122,25 +129,23 @@ class SensitiveInfoExtractor(object):
             "generic_api_key": "[a|A][p|P][i|I][_]?[k|K][e|E][y|Y].*['|\"][0-9a-zA-Z]{32,45}['|\"]",
             "generic_secret": "[s|S][e|E][c|C][r|R][e|E][t|T].*['|\"][0-9a-zA-Z]{32,45}['|\"]",
             "ip_address": r"(?:(?:1\d\d|2[0-5][0-5]|2[0-4]\d|0?[1-9]\d|0?0?\d)\.){3}(?:1\d\d|2[0-5][0-5]|2[0-4]\d|0?[1-9]\d|0?0?\d)",
-            "link_finder": "((?:https?://|www\d{0,3}[.])[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)+[\w().=/;,#:@?&~*+!$%{}-]*)",
+            #"link_finder": "((?:https?://|www\d{0,3}[.])[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)+[\w().=/;,#:@?&~*+!$%{}-]*)",
             "password_in_url": "[a-zA-Z]{3,10}://[^/\\s:@]{3,20}:[^/\\s:@]{3,20}@.{1,100}[\"'\\s]"
             }
-        patterns = list(zip(patterns.keys(), patterns.values()))
-        ioc_list = []
+        compiled_patterns = [(key, re.compile(pattern)) for key, pattern in patterns.items()]
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_dir, 'known_false_positives.txt')
-        # Read known false positives from a file
+
         with open(file_path, 'r') as f:
-            known_false_positives = [line.strip() for line in f]
-        
-        for p in patterns:
-            res = list(set(re.findall(re.compile(p[1]), text)))  # try to find all patterns in text
+            known_false_positives = [re.compile(line.strip()) for line in f if line.strip() and not line.startswith('#')]
+
+
+        ioc_list = []
+        for key, compiled_pattern in compiled_patterns:
+            res = list(set(compiled_pattern.findall(text)))
             for i in res:
-                # Only add to the list if it is not a known false positive
-                if not any(re.match(fp, i) for fp in known_false_positives):
-                    a="{}: {}".format(p[0],i)
+                if not any(fp.match(i) for fp in known_false_positives):
+                    a = "{}: {}".format(key, i)
                     ioc_list.append(a)
         return ioc_list
-
-
