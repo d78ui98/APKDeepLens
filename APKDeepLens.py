@@ -1,7 +1,5 @@
 import os
 import subprocess
-import sys
-import re
 import traceback
 import logging
 import argparse
@@ -10,7 +8,6 @@ import xml.etree.ElementTree as ET
 import datetime
 from static_tools import sensitive_info_extractor, scan_android_manifest
 from report_gen import ReportGen
-from configparser import ConfigParser
 
 """
     Title:      APKDeepLens
