@@ -39,4 +39,32 @@ https?://www\.youtube\.com.*
 https?://googleads\.g\.doubleclick\.net.*
 https?://.*\.appnext\.com.*
 https?://amazon\.com/.*
-(?:https?://)?(?:[^/]*\.)?(google|example|aptoide|sentry|aptoi|amazon|slf4j|facebook|xmlpull|schema.org)\.[^/]+(/.*)?$
+(?:https?://)?(?:[^/]*\.)?(google|microsoft|mozilla|webkit|npmjs|aptoide|sentry|aptoi|amazon|slf4j|facebook|xmlpull|schema)\.(com|org|net|io|gov|edu)[^/]*(/.*)?$
+
+
+# Common Development and Localhost IPs
+^(?:https?://)?10\.\d{1,3}\.\d{1,3}\.\d{1,3}$
+^(?:https?://)?172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$
+^(?:https?://)?192\.168\.\d{1,3}\.\d{1,3}$
+^(?:https?://)?127\.0\.0\.1$
+
+# Standard Documentation and Help URLs
+(?:https?://)?help\.dottoro\.com/[^/]+\.php$
+(?:https?://)?drafts\.fxtf\.org/[^/]+$
+(?:https?://)?cssdot\.ru/[^/]+$
+(?:https?://)?phrogz\.net/tmp/[^/]+$
+(?:https?://)?msdn\.microsoft\.com/en-us/library/[^/]+$
+(?:https?://)?bugzilla\.mozilla\.org/show_bug\.cgi\?id=\d+$
+(?:https?://)?webkit\.org/blog/\d+/[^/]+$
+(?:https?://)?registry\.npmjs\.org/[^/]+/-/[^/]+\.tgz$
+
+# Common CDN and Image Hosting URLs
+(?:https?://)?uploads-ssl\.webflow\.com/[^/]+$
+(?:https?://)?pbs\.twimg\.com/profile_images/[^/]+$
+(?:https?://)?encrypted-tbn0\.gstatic\.com/images\?q=tbn:[^/]+$
+(?:https?://)?cdn\.imgbin\.com/[^/]+$
+(?:https?://)?i\.pinimg\.com/[^/]+$
+
+# Exclude Common Third-Party SDKs
+(?:https?://)?microsoft\.github\.io/code-push$
+(?:https?://)?reactjs\.org/docs/error-decoder\.html\?invariant=$
