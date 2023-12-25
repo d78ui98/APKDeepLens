@@ -30,7 +30,7 @@ class ScanAndroidManifest(object):
         'platform_build_version_code': manifest.attrib.get('platformBuildVersionCode', "Not available"),
         'complied_sdk_version': manifest.attrib.get('compileSdkVersion', "Not available"),
         'permissions': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('uses-permission')],
-
+        'dangerous_permission': "",
         'activities': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('application/activity')],
         'services': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('application/service')],
         'receivers': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('application/receiver')],
