@@ -27,9 +27,10 @@ class ScanAndroidManifest(object):
         android_namespace = '{http://schemas.android.com/apk/res/android}'
 
         data = {
-        'platformBuildVersionCode': manifest.attrib.get('platformBuildVersionCode', "Not available"),
-        'compileSdkVersion': manifest.attrib.get('compileSdkVersion', "Not available"),
+        'platform_build_version_code': manifest.attrib.get('platformBuildVersionCode', "Not available"),
+        'complied_sdk_version': manifest.attrib.get('compileSdkVersion', "Not available"),
         'permissions': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('uses-permission')],
+
         'activities': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('application/activity')],
         'services': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('application/service')],
         'receivers': [elem.attrib[f'{android_namespace}name'] for elem in manifest.findall('application/receiver')],
@@ -85,10 +86,10 @@ class ScanAndroidManifest(object):
         print(indent + data['package_name'] + "\n")
 
         util.mod_log(f"[+] Platform Build Version Code:", util.OKCYAN)
-        print(indent + str(data['platformBuildVersionCode']) + "\n")
+        print(indent + str(data['platform_build_version_code']) + "\n")
 
         util.mod_log(f"[+] Compile SDK Version:", util.OKCYAN)
-        print(indent + str(data['compileSdkVersion']) + "\n")
+        print(indent + str(data['complied_sdk_version']) + "\n")
 
         if data['permissions']:
             util.mod_log(f"[+] Permissions:", util.OKCYAN)
@@ -98,6 +99,7 @@ class ScanAndroidManifest(object):
         
         if dangerous_permissions:
             util.mod_log(f"[+] Dangerous Permissions:", util.FAIL)
+            data['dangerous_permission'] = dangerous_permissions
             for permission in dangerous_permissions:
                 print(indent + permission)
             print()
