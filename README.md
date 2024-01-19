@@ -74,4 +74,7 @@ We welcome contributions to the APKDeepLens project. If you have a feature reque
 For those interested in contributing code, please follow the standard GitHub process.
 We'll review your contributions as quickly as possible :)
 
+## Featured at
+
+ - Blackhat MEA 2023 - https://blackhatmea.com/session/apkaleidoscope-android-security-insights-full-spectrum-0
 
