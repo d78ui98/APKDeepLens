@@ -262,3 +262,7 @@ if __name__ == "__main__":
             obj.generate_html_pdf_report()
         
     except Exception as e:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        line_number = exc_traceback.tb_lineno
+        util.mod_print(f"[-] {str(e)} at line {line_number}", util.FAIL)
+        exit(0)
