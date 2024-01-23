@@ -1,11 +1,11 @@
 import os
 import subprocess
 import traceback
+import sys
 import logging
 import argparse
 import time 
 import xml.etree.ElementTree as ET
-import datetime
 from static_tools import sensitive_info_extractor, scan_android_manifest
 from report_gen import ReportGen
 
@@ -169,7 +169,17 @@ if __name__ == "__main__":
         
         # Calling function to handle apk names and path.
         is_path_or_filename(apk)
-        
+
+        # Results dict store all the response in json.
+        results_dict = {
+            "apk_name": apk_name,
+            "package_name":"",
+            "permission": "",
+            "dangerous_permission":"",
+            "manifest_analysis":"",
+            "hardcoded_secrets":"",
+        }
+
         # Creating object for autoapkscanner class
         obj_self = AutoApkScanner()
         apk_file_abs_path = obj_self.return_abs_path(apk_path)
@@ -191,8 +201,30 @@ if __name__ == "__main__":
         # Extraction useful infomration from android menifest file
         #obj_self.extract_manifest_info(apk_name)
         extracted_source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app_source", apk_name)
-        obj_self = scan_android_manifest.ScanAndroidManifest().extract_manifest_info(extracted_source_path)
-    
+        manifest_results = scan_android_manifest.ScanAndroidManifest().extract_manifest_info(extracted_source_path)
+
+        results_dict["package_name"] = manifest_results["package_name"]
+        results_dict["permission"] = manifest_results["permissions"]
+        results_dict["dangerous_permission"] = manifest_results["dangerous_permission"] 
+        results_dict["manifest_analysis"] = {
+            "activities": {
+                "all": manifest_results["activities"],
+                "exported": manifest_results["exported_activity"]
+            },
+            "services": {
+                "all": manifest_results["services"],
+                "exported": manifest_results["exported_service"]
+            },
+            "receivers": {
+                "all": manifest_results["receivers"],
+                "exported": manifest_results["exported_receiver"]
+            },
+            "providers": {
+                "all": manifest_results["providers"],
+                "exported": manifest_results["exported_provider"]
+            }
+        }
+        
         # Extracting hardcoded secrets
         obj = sensitive_info_extractor.SensitiveInfoExtractor()
         util.mod_log("[+] Reading all file paths ", util.OKCYAN)
@@ -208,7 +240,6 @@ if __name__ == "__main__":
         print(result)
 
         ############## REPORT GENERATION #############
-
         if args.report:
             
             # Extracting all the required paths
@@ -231,5 +262,3 @@ if __name__ == "__main__":
             obj.generate_html_pdf_report()
         
     except Exception as e:
-        util.mod_print(f"[-] {str(e)}", util.FAIL)
-        exit(0)
