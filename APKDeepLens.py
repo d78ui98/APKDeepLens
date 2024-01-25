@@ -75,16 +75,13 @@ def parse_args():
 
     parser.add_argument("-apk", metavar="APK", type=str, required=True,
                     help="Path to the APK file to be analyzed.")
-    parser.add_argument("-v", "--version", action="version", version="APKDeepLens v1.0",
+    parser.add_argument("-v", "-version", action="version", version="APKDeepLens v1.0",
                         help="Display the version of APKDeepLens.")
     parser.add_argument("-source_code_path", metavar="APK", type=str,
                     help="Enter a valid path of extracted source for apk.")
-    parser.add_argument("-l", "--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                        default="INFO", help="Set the logging level. Default is INFO.")
     parser.add_argument("-report", choices=["json", "pdf", "html"], default="json",
                     help="Format of the report to be generated. Default is JSON.")
-
-
+    parser.add_argument("-l",metavar="log level", help="Set the logging level")
     return parser.parse_args()
 
 
