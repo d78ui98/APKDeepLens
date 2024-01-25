@@ -81,7 +81,8 @@ def parse_args():
                     help="Enter a valid path of extracted source for apk.")
     parser.add_argument("-l", "--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                         default="INFO", help="Set the logging level. Default is INFO.")
-    parser.add_argument("-report", action="store_true", help="Generates a report if this argument is provided.")
+    parser.add_argument("-report", choices=["json", "pdf", "html"], default="json",
+                    help="Format of the report to be generated. Default is JSON.")
 
 
     return parser.parse_args()
@@ -239,7 +240,8 @@ if __name__ == "__main__":
         result = obj.extract_insecure_request_protocol(all_file_path)
         print(result)
 
-        ############## REPORT GENERATION #############
+        ############## REPORT GENERATION ############
+
         if args.report:
             
             # Extracting all the required paths
@@ -259,8 +261,17 @@ if __name__ == "__main__":
 
             # Creating object for report generation module.
             obj = ReportGen(apk_name, manifest, res_path, source_path, template_path)
-            obj.generate_html_pdf_report()
+            
         
+            if args.report == "html":
+                obj.generate_html_pdf_report(report_type="html")
+            elif args.report == "pdf":
+                obj.generate_html_pdf_report(report_type="pdf")
+            elif args.report == "json":
+                obj.generate_json_report(results_dict)
+            else:
+                util.mod_print(f"[-] Invalid Report type argument provided", util.FAIL)
+
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         line_number = exc_traceback.tb_lineno
