@@ -1,6 +1,7 @@
 import os
 import subprocess
 import re
+import json
 from xhtml2pdf import pisa
 import xml.etree.ElementTree as ET
 import datetime
@@ -141,7 +142,6 @@ class ReportGen(object):
         for regexp in keyword_search_dict[keyword]:
             cmd = 'cd "' + self.res_path + '" ; grep -ErIn "' + regexp + '" "' + self.source_path + '" 2>/dev/null'
             #Eren yeager
-            print(cmd)
             try:
                 o = subprocess.check_output( cmd, shell=True ).decode('utf-8')
             except Exception as e:
@@ -280,7 +280,17 @@ class ReportGen(object):
         cleaned_name = re.sub(r'(\.com|\.apk)', '', apk_name)
         return cleaned_name
 
-    def generate_html_pdf_report(self):
+    def generate_json_report(self, json_response):
+        """
+        This function generates the json report based on the json output
+        """
+        clean_apk_name = self.clean_apk_name(self.apk_name)
+        json_report_path = "reports/report_{}.json".format(clean_apk_name)
+        with open(json_report_path, 'w') as json_file:
+            json.dump(json_response, json_file, indent=4)
+        util.mod_print("[+] Generated JSON report - {}".format(json_report_path), util.OKCYAN)
+
+    def generate_html_pdf_report(self, report_type):
         """
         This the function generates an html and pdf report using functions mentioned in report_gen.py
         """
@@ -319,13 +329,16 @@ class ReportGen(object):
             cleaned_apk_name = obj.clean_apk_name(self.apk_name)
             html_report_path = "reports/report_{}.html".format(cleaned_apk_name)
             obj.grenerate_html_report(report_content, html_report_path)
-            util.mod_print("[+] Generated HTML report - {}".format(html_report_path), util.OKCYAN)
+            if report_type == "html":
+                util.mod_print("[+] Generated HTML report - {}".format(html_report_path), util.OKCYAN)
 
             # Converting html report to pdf.
-            pdf_name = f"report_{cleaned_apk_name}.pdf"
-            pdf_path = "reports/{}".format(pdf_name)
-            obj.convert_html_to_pdf(html_report_path, pdf_path)
-            util.mod_print("[+] Generated PDF report - {}".format(pdf_path), util.OKCYAN)
+            if report_type == "pdf":
+                pdf_name = f"report_{cleaned_apk_name}.pdf"
+                pdf_path = "reports/{}".format(pdf_name)
+                obj.convert_html_to_pdf(html_report_path, pdf_path)
+                util.mod_print("[+] Generated PDF report - {}".format(pdf_path), util.OKCYAN)
+
 
         except Exception as e:
             util.mod_print(f"[-] {str(e)}", util.FAIL)
