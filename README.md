@@ -8,7 +8,8 @@
 
 APKDeepLens is a Python based tool designed to scan Android applications (APK files) for security vulnerabilities. It specifically targets the OWASP Top 10 mobile vulnerabilities, providing an easy and efficient way for developers, penetration testers, and security researchers to assess the security posture of Android apps.
 
-![Screenshot 2023-11-24 193237](https://github.com/d78ui98/APKDeepLens/assets/27950739/39d7adfe-20b6-4b8e-bf9d-7f7759276a69)
+![image](https://github.com/d78ui98/APKDeepLens/assets/27950739/c9236e3d-60d5-4832-85dc-f09a449bade3)
+
 
 
 ## Features
