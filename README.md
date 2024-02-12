@@ -78,4 +78,5 @@ We'll review your contributions as quickly as possible :)
 ## Featured at
 
  - Blackhat MEA 2023 - https://blackhatmea.com/session/apkaleidoscope-android-security-insights-full-spectrum-0
+ - Blackhat ASIA 2024 - https://www.blackhat.com/asia-24/arsenal/schedule/index.html#apkdeeplens---android-security-insights-in-full-spectrum-37182
 
