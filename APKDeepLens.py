@@ -229,7 +229,8 @@ if __name__ == "__main__":
         file_paths = obj.get_all_file_paths(extracted_apk_path)
         relative_to = extracted_apk_path
         util.mod_log("[+] Extracting all hardcoded secrets ", util.OKCYAN)
-        obj.extract_all_sensitive_info(file_paths, relative_to)
+        hardcoded_secrets_result = obj.extract_all_sensitive_info(file_paths, relative_to)
+        results_dict["hardcoded_secrets"] = hardcoded_secrets_result
     
         # extracting insecure connections
         util.mod_log("[+] Extracting all insecure connections ", util.OKCYAN)
