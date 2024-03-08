@@ -200,7 +200,6 @@ if __name__ == "__main__":
         #obj_self.extract_manifest_info(apk_name)
         extracted_source_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app_source", apk_name)
         manifest_results = scan_android_manifest.ScanAndroidManifest().extract_manifest_info(extracted_source_path)
-
         results_dict["package_name"] = manifest_results["package_name"]
         results_dict["permission"] = manifest_results["permissions"]
         results_dict["dangerous_permission"] = manifest_results["dangerous_permission"] 
