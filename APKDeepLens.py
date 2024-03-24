@@ -52,9 +52,9 @@ class util:
         logo =f"""                 
 {util.OKGREEN} ████  █████  ██  ██    ( )                  (_ )                           {util.ENDC}
 {util.OKGREEN}██  ██ ██  ██ ██ ██    _| |  __     __  _ _   | |     __    ___    ___      {util.ENDC}
-{util.OKGREEN}██████ █████  ████   /'_` | /'_`\ /'_`\( '_`\ | |    /'_`\/' _ `\/',__)     {util.ENDC}
-{util.OKGREEN}██  ██ ██     ██ ██ ( (_| |(  __/(  __/| (_) )| |__ (  __/| ( ) |\__, \     {util.ENDC}
-{util.OKGREEN}██  ██ ██     ██  ██`\__,_)`\___)`\___)| ,__/'(____/`\___)(_) (_)(____/     {util.ENDC}
+{util.OKGREEN}██████ █████  ████   /'_` | /'_`\\ /'_`\\( '_`\\ | |    /'_`\\/' _ `\\/',__)     {util.ENDC}
+{util.OKGREEN}██  ██ ██     ██ ██ ( (_| |(  __/(  __/| (_) )| |__ (  __/| ( ) |\\__, \\     {util.ENDC}
+{util.OKGREEN}██  ██ ██     ██  ██`\\__,_)`\\___)`\\___)| ,__/'(____/`\\___)(_) (_)(____/     {util.ENDC}
 {util.OKGREEN}                                       | |                                  {util.ENDC}
 {util.OKGREEN}                                       (_)                                  {util.ENDC}
 {util.OKCYAN}                                              - Made By Deepanshu{util.ENDC}
