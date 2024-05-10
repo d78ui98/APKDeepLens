@@ -32,7 +32,7 @@ APKDeepLens is a Python-based tool that performs various operations on APK files
 To use APKDeepLens, you'll need to have Python 3.8 or higher installed on your system. You can then install APKDeepLens using the following command:
 ### For Linux
 ```
-git clone https://github.com/d78ui98/APKDeepLens/tree/main
+git clone https://github.com/d78ui98/APKDeepLens.git
 cd /APKDeepLens
 python3 -m venv venv
 source venv/bin/activate
@@ -41,7 +41,7 @@ python APKDeepLens.py --help
 ```
 ### For Windows
 ```
-git clone https://github.com/d78ui98/APKDeepLens/tree/main
+git clone https://github.com/d78ui98/APKDeepLens.git
 cd \APKDeepLens
 python3 -m venv venv
 .\venv\Scripts\activate
