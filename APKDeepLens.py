@@ -7,7 +7,7 @@ import argparse
 import time 
 import xml.etree.ElementTree as ET
 from static_tools import sensitive_info_extractor, scan_android_manifest
-from report_gen import ReportGen
+from report_gen import ReportGen, util
 
 """
     Title:      APKDeepLens
@@ -19,20 +19,12 @@ from report_gen import ReportGen
 
 logging.basicConfig(level=logging.ERROR, format="%(message)s")
 
-class util:
+class util(util):
     '''
     A static class for which contain some useful variables and methods
     '''
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
+    @staticmethod
     def mod_print(text_output, color):
         """
         Better mod print. It gives the line number, file name in which error occured. 
@@ -42,9 +34,7 @@ class util:
         formatted_message = f"{filename}:{line_no}: {text_output}"
         print(color + formatted_message + util.ENDC)
 
-    def mod_log(text, color):
-        logging.info(color + "{}".format(text) + util.ENDC)
-    
+    @staticmethod
     def print_logo():
         """
         Logo for APKDeepLens
@@ -79,7 +69,7 @@ def parse_args():
                         help="Display the version of APKDeepLens.")
     parser.add_argument("-source_code_path", metavar="APK", type=str,
                     help="Enter a valid path of extracted source for apk.")
-    parser.add_argument("-report", choices=["json", "pdf", "html"], default="json",
+    parser.add_argument("-report", choices=["json", "pdf", "html", "txt"], default="json",
                     help="Format of the report to be generated. Default is JSON.")
     parser.add_argument("-l",metavar="log level", help="Set the logging level")
     return parser.parse_args()
@@ -142,11 +132,11 @@ if __name__ == "__main__":
             os.environ['VIRTUAL_ENV']
         except KeyError:
             util.mod_log("[-] ERROR: Not inside virtualenv. Do source venv/bin/activate", util.FAIL)
-            exit(0)
+            exit(1)
 
         if not args.apk:
             util.mod_log("[-] ERROR: Please provide the apk file using the -apk flag.", util.FAIL)
-            exit(0)
+            exit(1)
 
         apk = args.apk
 
@@ -176,6 +166,7 @@ if __name__ == "__main__":
             "dangerous_permission":"",
             "manifest_analysis":"",
             "hardcoded_secrets":"",
+            "insecure_requests":""
         }
 
         # Creating object for autoapkscanner class
@@ -183,7 +174,7 @@ if __name__ == "__main__":
         apk_file_abs_path = obj_self.return_abs_path(apk_path)
         if not obj_self.apk_exists(apk_file_abs_path):
             util.mod_log(f"[-] ERROR: {apk_file_abs_path} not found.", util.FAIL)
-            exit(0)
+            exit(1)
         else:
             util.mod_log(f"[+] {apk_file_abs_path} found!", util.OKGREEN)
         time.sleep(1)
@@ -221,7 +212,7 @@ if __name__ == "__main__":
                 "exported": manifest_results["exported_provider"]
             }
         }
-        
+
         # Extracting hardcoded secrets
         obj = sensitive_info_extractor.SensitiveInfoExtractor()
         util.mod_log("[+] Reading all file paths ", util.OKCYAN)
@@ -229,13 +220,20 @@ if __name__ == "__main__":
         relative_to = extracted_apk_path
         util.mod_log("[+] Extracting all hardcoded secrets ", util.OKCYAN)
         hardcoded_secrets_result = obj.extract_all_sensitive_info(file_paths, relative_to)
-        results_dict["hardcoded_secrets"] = hardcoded_secrets_result
-    
+        if isinstance(hardcoded_secrets_result, list):
+            results_dict["hardcoded_secrets"] = hardcoded_secrets_result
+        else:
+            results_dict["hardcoded_secrets"] = []
+
         # extracting insecure connections
         util.mod_log("[+] Extracting all insecure connections ", util.OKCYAN)
         all_file_path = obj.get_all_file_paths(extracted_apk_path)
         result = obj.extract_insecure_request_protocol(all_file_path)
         print(result)
+        if isinstance(result, list):
+            results_dict["insecure_requests"] = result
+        else:
+            results_dict["insecure_requests"] = []
 
         ############## REPORT GENERATION ############
 
@@ -266,6 +264,8 @@ if __name__ == "__main__":
                 obj.generate_html_pdf_report(report_type="pdf")
             elif args.report == "json":
                 obj.generate_json_report(results_dict)
+            elif args.report == "txt":
+                obj.generate_txt_report(results_dict)
             else:
                 util.mod_print(f"[-] Invalid Report type argument provided", util.FAIL)
 
@@ -273,4 +273,4 @@ if __name__ == "__main__":
         exc_type, exc_value, exc_traceback = sys.exc_info()
         line_number = exc_traceback.tb_lineno
         util.mod_print(f"[-] {str(e)} at line {line_number}", util.FAIL)
-        exit(0)
+        exit(1)

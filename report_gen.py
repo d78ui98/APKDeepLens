@@ -30,9 +30,11 @@ class util:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+    @staticmethod
     def mod_print(text_output, color):
         print(color + "{}".format(text_output) + util.ENDC)
 
+    @staticmethod
     def mod_log(text, color):
         logging.info(color + "{}".format(text) + util.ENDC)
 
@@ -113,7 +115,7 @@ class ReportGen(object):
             return ""
 
 
-    def grep_keyword(self, keyword):
+    def grep_keyword(self, keyword, txt_ouput: bool = False):
         """
         This function is used to read keyword dict and run the grep commands on the extracted android source code.
 
@@ -148,9 +150,38 @@ class ReportGen(object):
                 print(str(e))
                 continue
 
-            output = output + self.add_html_tag( o.strip(), regexp )
+            o.strip()
+            if not txt_ouput:
+                output += self.add_html_tag(o, regexp )
+            else:
+                output += self.add_sundarta_for_grep(o, regexp)
 
         return output
+
+    def add_sundarta_for_grep(self, grep_result, regexp):
+        "For prettifing grep output, outputs for txt file."
+        try:
+            output = ''
+            for grep in grep_result.split("\n"):
+                tmp = grep.split(':')
+                if len(tmp) < 3:  # Ensure there are enough components in the split result
+                    continue
+                filepath, line, content = tmp[0], tmp[1], ':'.join(tmp[2:])
+                filepath = "source" + filepath[len(self.source_path):] # Dont include full path
+                content = content.strip()
+                _match = re.search(regexp, content)
+                start_pos = _match.start()
+                end_pos = _match.end()
+                content_f = content + "\n"
+                content_f += " " * (start_pos + len(filepath) + len(line) + 2) # +2 for two ":"
+                content_f += "^" * (end_pos - start_pos)
+                content_f += "\n"
+                output += f"{filepath}:{line}:{content_f}"
+            return output
+
+        except Exception as e:
+            util.mod_log(f"[-] ERROR in add_sundarta_for_grep: {str(e)}", util.FAIL)
+            return ""
 
     def add_html_tag(self, grep_result, regexp):
         """
@@ -269,10 +300,11 @@ class ReportGen(object):
         # write content from html report to pdf
         result_file = open(pdf_name, "w+b")
         pisa.CreatePDF(
-                source_html,                
-                dest=result_file)           
+            source_html,
+            dest=result_file
+        )
         result_file.close()
-    
+
     def clean_apk_name(self, apk_name):
         """
         This function removes 'com' and 'apk' parts from the apk_name if they exist.
@@ -292,6 +324,103 @@ class ReportGen(object):
             json.dump(json_response, json_file, indent=4)
         util.mod_print("[+] Generated JSON report - {}".format(json_report_path), util.OKCYAN)
 
+    def create_obj_for_report(self, txt_output: bool = False) -> tuple['ReportGen', dict]:
+        manifest = self.manifest
+        res_path = self.res_path
+        source_path = self.source_path
+        template_path = self.template_path
+        apk_name = self.apk_name
+
+        obj = ReportGen(apk_name, manifest, res_path, source_path, template_path)
+        permissions  = obj.extract_permissions(manifest)
+        dangerous_permission = obj.extract_dangerous_permissions(manifest)
+
+        html_dict = {}
+        html_dict['build'] = obj.get_build_information()
+        html_dict['package_name'] = manifest.attrib['package']
+        html_dict['android_version'] = manifest.attrib['android:versionCode']
+        html_dict['date'] = datetime.datetime.today().strftime('%d/%m/%Y')
+        html_dict['permissions'] = permissions
+        html_dict['dangerous_permission'] = dangerous_permission
+        html_dict['intent_grep'] = obj.grep_keyword('intent', txt_output)
+        html_dict['internal_storage_grep'] = obj.grep_keyword('internal_storage', txt_output)
+        html_dict['external_storage_grep'] = obj.grep_keyword('external_storage', txt_output)
+        #print(html_dict)
+        return obj, html_dict
+
+    def generate_txt_report(self, result_dict: dict):
+        try:
+            result = "Basic Info -\n"
+            obj, html_dict = self.create_obj_for_report(True)
+            for text, value in zip(
+                [
+                    "Report date",
+                    "Package name",
+                    "Build",
+                    "Android version"
+                ],
+                [
+                    html_dict["date"],
+                    html_dict["package_name"],
+                    html_dict["build"],
+                    html_dict["android_version"]
+                ]
+            ):
+                result += f"{text}: {value}\n"
+            result += "\nPermissions:\n"
+            if len(html_dict["permissions"]) < 1:
+                result += "No permission(s) found.\n"
+            for perm in html_dict["permissions"]:
+                result += f"- {perm}\n"
+            result += "\nPotentially dangerous permissions:\n"
+            if len(html_dict["dangerous_permission"]) < 1:
+                result += "No permission(s) found.\n"
+            for perm in html_dict["dangerous_permission"]:
+                result += f"- {perm}\n"
+
+            def _manif_analysis_parser(index: str) -> str:
+                _res = f"\n{index.capitalize()}:\n"
+                if len(result_dict["manifest_analysis"][index]["all"]) < 1:
+                    _res += f"No {index} found.\n"
+                for val in result_dict["manifest_analysis"][index]["all"]:
+                    if val in result_dict["manifest_analysis"][index]["exported"]:
+                        _res += f"- {val} [exported]\n"
+                    else:
+                        _res += f"- {val}\n"
+                return _res
+
+            result += "".join([
+                _manif_analysis_parser(index) for index in [
+                    "activities", "services", "receivers", "providers"
+                ]
+            ])
+
+            result += "\nInsecure connections:\n"
+            if len(result_dict["insecure_requests"]) < 1:
+                result += "No insecure connections found.\n"
+            for conn in result_dict["insecure_requests"]:
+                result += f"- {conn}\n"
+
+            result += "\nIntents:\n"
+            result += html_dict["intent_grep"]
+            result += "\nInternal storage:\n"
+            result += html_dict["internal_storage_grep"]
+            result += "\nExternal storage:\n"
+            result += html_dict["external_storage_grep"]
+
+            # Saving the report
+            cleaned_apk_name = obj.clean_apk_name(self.apk_name)
+            
+            if not os.path.exists('reports'):
+                os.makedirs('reports')
+            
+            txt_report_path = f"reports/report_{cleaned_apk_name}.txt"
+            with open(txt_report_path, "w", encoding = "utf-8") as f:
+                f.write(result)
+            util.mod_print(f"[+] Generated TXT report - {txt_report_path}", util.OKCYAN)
+        except Exception as e:
+            util.mod_print(f"[-] {str(e)}", util.FAIL)
+
     def generate_html_pdf_report(self, report_type):
         """
         This the function generates an html and pdf report using functions mentioned in report_gen.py
@@ -299,28 +428,7 @@ class ReportGen(object):
 
         try:
             # Creating object for report generation module.
-
-            manifest = self.manifest
-            res_path = self.res_path
-            source_path = self.source_path
-            template_path = self.template_path
-            apk_name = self.apk_name
-
-            obj = ReportGen(apk_name, manifest, res_path, source_path, template_path)
-            permissions  = obj.extract_permissions(manifest)
-            dangerous_permission = obj.extract_dangerous_permissions(manifest)
-
-            html_dict = {}
-            html_dict['build'] = obj.get_build_information()
-            html_dict['package_name'] = manifest.attrib['package']
-            html_dict['android_version'] = manifest.attrib['android:versionCode']
-            html_dict['date'] = datetime.datetime.today().strftime('%d/%m/%Y')
-            html_dict['permissions'] = permissions
-            html_dict['dangerous_permission'] = dangerous_permission
-            html_dict['intent_grep'] = obj.grep_keyword('intent')
-            html_dict['internal_storage_grep'] = obj.grep_keyword('internal_storage')
-            html_dict['external_storage_grep'] = obj.grep_keyword('external_storage')
-            #print(html_dict)
+            obj, html_dict = self.create_obj_for_report()
 
             # Ensure 'reports' directory exists
             if not os.path.exists('reports'):
@@ -333,7 +441,7 @@ class ReportGen(object):
             obj.grenerate_html_report(report_content, html_report_path)
             if report_type == "html":
                 util.mod_print("[+] Generated HTML report - {}".format(html_report_path), util.OKCYAN)
-
+ 
             # Converting html report to pdf.
             if report_type == "pdf":
                 pdf_name = f"report_{cleaned_apk_name}.pdf"
