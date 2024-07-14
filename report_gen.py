@@ -1,11 +1,11 @@
-import os
-import subprocess
-import re
-import json
-from xhtml2pdf import pisa
-import xml.etree.ElementTree as ET
 import datetime
+import json
 import logging
+import os
+import re
+import subprocess
+
+from xhtml2pdf import pisa
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
