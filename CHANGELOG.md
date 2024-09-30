@@ -4,6 +4,13 @@ All the notable changes to this project will be documented in this file.
 
 ## [Released]
 
+## [1.0.3 - 2024-09-19]
+- Bug fixes and code optimization
+- Added more detection for vulnerable code
+
+## [1.0.3 - 2024-07-25]
+- Added support for text format output
+
 ## [1.0.2] - 2023-12-5
 - Better structuring of project be seperating code for android manifest analysis and report generation
 - updated debugging methods
