@@ -384,7 +384,7 @@ class ReportGen(object):
 
     def create_obj_for_report(
         self, txt_output: bool = False
-    ) -> tuple["ReportGen", dict]:
+    ):
         manifest = self.manifest
         res_path = self.res_path
         source_path = self.source_path
