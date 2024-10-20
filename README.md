@@ -29,7 +29,7 @@ APKDeepLens is a Python-based tool that performs various operations on APK files
 
 ## Installation
 
-To use APKDeepLens, you'll need to have Python 3.8 or higher installed on your system. You can then install APKDeepLens using the following command:
+To use APKDeepLens, make sure you have Python 3.10 (recommended) or higher installed, along with Java or OpenJDK. Once those are set up, you can install APKDeepLens by running the following command:
 ### For Linux
 ```
 git clone https://github.com/d78ui98/APKDeepLens.git
