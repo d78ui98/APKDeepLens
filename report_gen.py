@@ -368,11 +368,9 @@ class ReportGen(object):
         This function generates the json report based on the json output
         """
         clean_apk_name = self.clean_apk_name(self.apk_name)
-        if not os.path.isfile(self.out_path):
-            json_report_path = os.path.join(self.out_path, "report_{clean_apk_name}.json")
-        else:
-            json_report_path = self.out_path
-        if not os.path.exists(json_report_path):
+        reports_dir = os.path.join(self.out_path, 'reports')
+        json_report_path = os.path.join(reports_dir, f"report_{clean_apk_name}.json")
+        if not os.path.exists(reports_dir):
             os.makedirs(
                 os.path.dirname(json_report_path), exist_ok=True
             )
