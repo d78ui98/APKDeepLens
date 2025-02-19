@@ -105,6 +105,11 @@ def parse_args():
         type=str,
         help="Output report path (can be filename or dir)"
     )
+    parser.add_argument(
+        "--ignore_virtualenv",
+        action="store_true",
+        help="Ignore virtual environment check.",
+    )
     parser.add_argument("-l", metavar="log level", help="Set the logging level")
     return parser.parse_args()
 
@@ -184,21 +189,23 @@ if __name__ == "__main__":
     try:
         args = parse_args()
 
-        # Check if virtual environment is activated.
-        try:
-            os.environ["VIRTUAL_ENV"]
-        except KeyError:
-            util.mod_log(
-                "[-] ERROR: Not inside virtualenv. Do source venv/bin/activate",
-                util.FAIL,
-            )
-            exit(1)
+        ignore_virtualenv = args.ignore_virtualenv
+        # Check if virtual environment is activated
+        if not ignore_virtualenv:
+            try:
+                os.environ["VIRTUAL_ENV"]
+            except KeyError:
+                util.mod_log(
+                    "[-] ERROR: Not inside virtualenv. Do source venv/bin/activate",
+                    util.FAIL,
+                )
+                exit(1)
 
-        if not args.apk:
-            util.mod_log(
-                "[-] ERROR: Please provide the apk file using the -apk flag.", util.FAIL
-            )
-            exit(1)
+            if not args.apk:
+                util.mod_log(
+                    "[-] ERROR: Please provide the apk file using the -apk flag.", util.FAIL
+                )
+                exit(1)
 
         apk = args.apk
 
