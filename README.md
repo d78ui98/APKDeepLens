@@ -33,7 +33,7 @@ To use APKDeepLens, make sure you have Python 3.10 (recommended) or higher insta
 ### For Linux
 ```
 git clone https://github.com/d78ui98/APKDeepLens.git
-cd /APKDeepLens
+cd APKDeepLens
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -42,7 +42,7 @@ python APKDeepLens.py --help
 ### For Windows
 ```
 git clone https://github.com/d78ui98/APKDeepLens.git
-cd \APKDeepLens
+cd APKDeepLens
 python3 -m venv venv
 .\venv\Scripts\activate
 pip install -r .\requirements.txt
