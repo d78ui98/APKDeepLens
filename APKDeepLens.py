@@ -190,8 +190,8 @@ if __name__ == "__main__":
         args = parse_args()
 
         ignore_virtualenv = args.ignore_virtualenv
-        # Check if virtual environment is activated
-        if not ignore_virtualenv:
+        # Check if virtual environment is activated 
+        if not os.path.exists("/.dockerenv") and not ignore_virtualenv:
             try:
                 os.environ["VIRTUAL_ENV"]
             except KeyError:
