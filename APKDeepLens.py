@@ -156,21 +156,47 @@ class AutoApkScanner(object):
 
     def extract_source_code(self, apk_file, target_dir):
         """
-        Extracting source code with Jdax
+        Extracting source code with JADX
         """
-        util.mod_log("[+] Extracting the source code to : " + target_dir, util.OKCYAN)
+        util.mod_log("[+] Extracting the source code to: " + target_dir, util.OKCYAN)
+
+        def is_running_in_docker():
+            return os.path.exists('/.dockerenv') or (
+                os.path.isfile('/proc/1/cgroup') and 'docker' in open('/proc/1/cgroup').read()
+            )
 
         is_windows = os.name == "nt"
+        in_docker = is_running_in_docker()
+
         jadx_executable = "jadx.bat" if is_windows else "jadx"
-        jadx_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "static_tools",
-            "jadx",
-            "bin",
-            jadx_executable,
-        )
-        output = subprocess.run([jadx_path, apk_file, "-d", target_dir])
-        print(output)
+
+        if in_docker:
+            jadx_path = "/app/static_tools/jadx/bin/jadx"
+        else:
+            jadx_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "static_tools",
+                "jadx",
+                "bin",
+                jadx_executable,
+            )
+
+        try:
+            result = subprocess.run(
+                [jadx_path, apk_file, "-d", target_dir],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            util.mod_log("[+] jadx ran successfully.", util.OKGREEN)
+            util.mod_log(result.stdout, util.OKBLUE)
+        except subprocess.CalledProcessError as e:
+            util.mod_log("[-] jadx failed to run. Unable to Extract {} source code".format(apk_name), util.FAIL)
+            util.mod_log("Return code: " + str(e.returncode), util.WARNING)
+            util.mod_log("Stdout:\n" + e.stdout, util.WARNING)
+            util.mod_log("Stderr:\n" + e.stderr, util.WARNING)
+        except FileNotFoundError:
+            util.mod_log(f"[-] jadx not found at: {jadx_path}", util.FAIL)
 
     def return_abs_path(self, path):
         """
