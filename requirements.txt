@@ -1,1 +1,2 @@
-xhtml2pdf==0.2.11
+python-bidi==0.4.2
+xhtml2pdf==0.2.16
