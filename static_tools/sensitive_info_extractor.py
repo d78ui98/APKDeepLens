@@ -27,10 +27,10 @@ class SensitiveInfoExtractor(object):
     def get_all_file_paths(self, file_path):
         totalFiles = []
         for root, dirs, files in os.walk(file_path):
-            tempFiles = [os.path.join(file_path,os.path.join(root, i)) for i in files]
+            tempFiles = [os.path.join(root, i) for i in files]
             totalFiles += tempFiles
 
-        return totalFiles 
+        return totalFiles
     
     def extract_all_sensitive_info(self, list_of_files, relative_path):
         """
@@ -45,27 +45,26 @@ class SensitiveInfoExtractor(object):
 
         excluded_extensions = ['.ttf', '.otf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.dex', '.gradle']
 
-        try:
-            for file in list_of_files:
-                _, file_extension = os.path.splitext(file)
-                if file_extension.lower() not in excluded_extensions:
-                    read = open(file, "r", encoding='utf-8', errors='ignore').read() 
-                    types_ioc_list = self.extract(read) 
-                    #fetching relative path
+        for file in list_of_files:
+            _, file_extension = os.path.splitext(file)
+            if file_extension.lower() not in excluded_extensions:
+                try:
+                    with open(file, "r", encoding='utf-8', errors='ignore') as f:
+                        read = f.read()
+                    types_ioc_list = self.extract(read)
                     real_relative_path = os.path.relpath(file, relative_path)
                     for items in types_ioc_list:
                         print(indent + items)
-                        ioc_and_type = items.split()
+                        parts = items.split(": ", 1)
                         secret_info = {
-                            "type":ioc_and_type[0],
-                            "ioc":ioc_and_type[1],
-                            "path": real_relative_path
+                            "type": parts[0],
+                            "ioc": parts[1] if len(parts) > 1 else "",
+                            "path": real_relative_path,
                         }
                         all_sensitive_info_list.append(secret_info)
-                        items = "{}: {}".format(real_relative_path, items)
-            return all_sensitive_info_list
-        except Exception as e:
-            return str(e) 
+                except Exception:
+                    continue
+        return all_sensitive_info_list
     
     def extract_insecure_request_protocol(self, list_of_files):
         """
@@ -75,20 +74,23 @@ class SensitiveInfoExtractor(object):
         final_list = list()
         script_dir = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(script_dir, 'known_false_positives.txt')
-        # Read known false positives from a file
+        # Read known false positives from a file (skip empty lines and comments)
         with open(file_path, 'r') as f:
-            known_false_positives = [line.strip() for line in f]
+            known_false_positives = [
+                line.strip() for line in f
+                if line.strip() and not line.strip().startswith('#')
+            ]
         for file in list_of_files:
             try:
-                read = open(file, "r", encoding='utf-8', errors='ignore').read()
-                regex_for_insecure_conn = "((?:http://|s?ftp://|smtp://|:javascript:|www\d{0,3}[.])[\w().=/;,#:@?&~*+!$%\{}-]+)"
+                with open(file, "r", encoding='utf-8', errors='ignore') as f:
+                    read = f.read()
+                regex_for_insecure_conn = r"((?:http://|s?ftp://|smtp://|:javascript:|www\d{0,3}[.])[\w().=/;,#:@?&~*+!$%\{}-]+)"
                 a = re.findall(regex_for_insecure_conn, read)
                 for i in a:
-                    # Only add to the list if it is not a known false positive
                     if not any(re.match(fp, i) for fp in known_false_positives):
                         final_list.append(i)
-            except Exception as e:
-                return str(e)
+            except Exception:
+                continue
         return list(set(final_list))
     
     def extract(self, text):

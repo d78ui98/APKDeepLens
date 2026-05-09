@@ -191,7 +191,7 @@ class AutoApkScanner(object):
             util.mod_log("[+] jadx ran successfully.", util.OKGREEN)
             util.mod_log(result.stdout, util.OKBLUE)
         except subprocess.CalledProcessError as e:
-            util.mod_log("[-] jadx failed to run. Unable to Extract {} source code".format(apk_name), util.FAIL)
+            util.mod_log("[-] jadx failed to run. Unable to Extract {} source code".format(apk_file), util.FAIL)
             util.mod_log("Return code: " + str(e.returncode), util.WARNING)
             util.mod_log("Stdout:\n" + e.stdout, util.WARNING)
             util.mod_log("Stderr:\n" + e.stderr, util.WARNING)

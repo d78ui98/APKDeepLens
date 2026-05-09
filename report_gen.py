@@ -1,11 +1,12 @@
 import datetime
+import html as html_module
 import json
 import logging
 import os
 import re
-import subprocess
 
 from xhtml2pdf import pisa
+from static_tools.utility.utility_class import DANGEROUS_PERMISSIONS
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 
@@ -133,26 +134,20 @@ class ReportGen(object):
             util.mod_log(f"[-] ERROR in load_template: {str(e)}", util.FAIL)
             return ""
 
-    def grep_keyword(self, keyword, txt_ouput: bool = False):
+    def grep_keyword(self, keyword, txt_output: bool = False):
         """
-        This function is used to read keyword dict and run the grep commands on the extracted android source code.
+        Search for keyword patterns in extracted Android source code using pure Python.
+        Replaces the previous shell-grep approach to eliminate command injection risk
+        and achieve cross-platform compatibility.
         """
         output = ""
 
-        """
-        This dictionary stores the keywords to search with the grep command.
-        Grep is much much faster than re.
-        ToDo -
-        - Add more search keywords
-        - move entire project to use grep.
-        """
         keyword_search_dict = {
             "external_call": [
                 r"([^a-zA-Z0-9](OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT|PROPFIND|PROPPATCH|"
                 r"MKCOL|COPY|MOVE|LOCK|UNLOCK|VERSION-CONTROL|REPORT|CHECKOUT|CHECKIN|UNCHECKOUT|"
                 r"MKWORKSPACE|UPDATE|LABEL|MERGE|BASELINE-CONTROL|MKACTIVITY|ORDERPATCH|ACL|PATCH|"
                 r"SEARCH|ARBITRARY)[^a-zA-Z0-9])",
-
                 r"(@(OPTIONS|GET|HEAD|POST|PUT|DELETE|TRACE|CONNECT|PROPFIND|PROPPATCH|MKCOL|COPY|"
                 r"MOVE|LOCK|UNLOCK|VERSION-CONTROL|REPORT|CHECKOUT|CHECKIN|UNCHECKOUT|MKWORKSPACE|"
                 r"UPDATE|LABEL|MERGE|BASELINE-CONTROL|MKACTIVITY|ORDERPATCH|ACL|PATCH|SEARCH|"
@@ -168,88 +163,83 @@ class ReportGen(object):
             ],
             "external_storage": [r"(EXTERNAL_STORAGE|EXTERNAL_CONTENT|getExternal)"],
         }
-        if not keyword in keyword_search_dict:
+
+        if keyword not in keyword_search_dict:
             return ""
 
         for regexp in keyword_search_dict[keyword]:
-            cmd = (
-                'cd "'
-                + self.res_path
-                + '" ; grep -ErIn "'
-                + regexp
-                + '" "'
-                + self.source_path
-                + '" 2>/dev/null'
-            )
-            # Eren yeager
             try:
-                o = subprocess.check_output(cmd, shell=True).decode("utf-8")
-            except Exception as e:
-                print(str(e))
+                compiled = re.compile(regexp, re.IGNORECASE)
+            except re.error:
                 continue
 
-            o.strip()
-            if not txt_ouput:
-                output += self.add_html_tag(o, regexp)
-            else:
-                output += self.add_sundarta_for_grep(o, regexp)
+            for root, _, files in os.walk(self.source_path):
+                for fname in files:
+                    fpath = os.path.join(root, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                            for line_no, line in enumerate(f, 1):
+                                if compiled.search(line):
+                                    content = line.rstrip()
+                                    if not txt_output:
+                                        output += self.add_html_tag(fpath, line_no, content, compiled)
+                                    else:
+                                        output += self.add_sundarta_for_grep(fpath, line_no, content, compiled)
+                    except Exception:
+                        continue
 
         return output
 
-    def add_sundarta_for_grep(self, grep_result, regexp):
-        "For prettifing grep output, outputs for txt file."
+    def add_sundarta_for_grep(self, filepath, line_no, content, compiled):
+        """Format a single match for text output with a caret indicator."""
         try:
-            output = ""
-            for grep in grep_result.split("\n"):
-                tmp = grep.split(":")
-                if (
-                    len(tmp) < 3
-                ):  # Ensure there are enough components in the split result
-                    continue
-                filepath, line, content = tmp[0], tmp[1], ":".join(tmp[2:])
-                filepath = (
-                    "source" + filepath[len(self.source_path) :]
-                )  # Dont include full path
-                content = content.strip()
-                _match = re.search(regexp, content)
-                start_pos = _match.start()
-                end_pos = _match.end()
-                content_f = content + "\n"
-                content_f += " " * (
-                    start_pos + len(filepath) + len(line) + 2
-                )  # +2 for two ":"
-                content_f += "^" * (end_pos - start_pos)
-                content_f += "\n"
-                output += f"{filepath}:{line}:{content_f}"
-            return output
+            short_path = "source" + filepath[len(self.source_path):]
+            content = content.strip()
+            match = compiled.search(content)
+            if not match:
+                return f"{short_path}:{line_no}:{content}\n"
+            start_pos = match.start()
+            end_pos = match.end()
+            content_f = content + "\n"
+            content_f += " " * (start_pos + len(short_path) + len(str(line_no)) + 2)
+            content_f += "^" * (end_pos - start_pos)
+            content_f += "\n"
+            return f"{short_path}:{line_no}:{content_f}"
 
         except Exception as e:
             util.mod_log(f"[-] ERROR in add_sundarta_for_grep: {str(e)}", util.FAIL)
             return ""
 
-    def add_html_tag(self, grep_result, regexp):
+    def add_html_tag(self, filepath, line_no, content, compiled):
         """
-        This method is used add the html tags to grep output to color the output for better presentation
+        Format a single match as HTML with the matched keyword highlighted.
+        Content is HTML-escaped before insertion to prevent XSS from APK source.
         """
         try:
-            output = ""
-            for grep in grep_result.split("\n"):
-                tmp = grep.split(":")
-                if (
-                    len(tmp) < 3
-                ):  # Ensure there are enough components in the split result
-                    continue
-                filepath, line, content = tmp[0], tmp[1], ":".join(tmp[2:])
-                content = re.sub(regexp, "ABRACADABRA1\\1ABRACADABRA2", content)
-                output += self.render_template(
-                    "grep_lines.html",
-                    {"filepath": filepath, "line": line, "content": content},
-                    True,
+            match = compiled.search(content)
+            if match:
+                start, end = match.start(), match.end()
+                before = html_module.escape(content[:start])
+                matched_text = html_module.escape(content[start:end])
+                after = html_module.escape(content[end:])
+                highlighted = (
+                    before
+                    + '<span class="grep_keyword">'
+                    + matched_text
+                    + "</span>"
+                    + after
                 )
-                output = output.replace(
-                    "ABRACADABRA1", '<span class="grep_keyword">'
-                ).replace("ABRACADABRA2", "</span>")
-            return output
+            else:
+                highlighted = html_module.escape(content)
+
+            return self.render_template(
+                "grep_lines.html",
+                {
+                    "filepath": html_module.escape(filepath),
+                    "line": str(line_no),
+                    "content": highlighted,
+                },
+            )
 
         except Exception as e:
             util.mod_log(f"[-] ERROR in add_html_tag: {str(e)}", util.FAIL)
@@ -288,55 +278,15 @@ class ReportGen(object):
 
     def extract_dangerous_permissions(self, manifest):
         """
-        This method is used to extracts dangerous permissions from the android  manifest.xml.
+        Extracts dangerous permissions from AndroidManifest.xml.
+        Uses shared DANGEROUS_PERMISSIONS list from utility_class.
         """
         permissions = []
         try:
             for permission_elem in self.manifest.findall(".//uses-permission"):
                 permission_name = permission_elem.attrib.get("android:name")
-                dangerous_permission_list = [
-                    "android.permission.READ_CALENDAR",
-                    "android.permission.WRITE_CALENDAR",
-                    "android.permission.CAMERA",
-                    "android.permission.READ_CONTACTS",
-                    "android.permission.WRITE_CONTACTS",
-                    "android.permission.GET_ACCOUNTS",
-                    "android.permission.ACCESS_FINE_LOCATION",
-                    "android.permission.ACCESS_COARSE_LOCATION",
-                    "android.permission.RECORD_AUDIO",
-                    "android.permission.READ_PHONE_STATE",
-                    "android.permission.READ_PHONE_NUMBERS",
-                    "android.permission.CALL_PHONE",
-                    "android.permission.ANSWER_PHONE_CALLS",
-                    "android.permission.READ_CALL_LOG",
-                    "android.permission.WRITE_CALL_LOG",
-                    "android.permission.ADD_VOICEMAIL",
-                    "android.permission.USE_SIP",
-                    "android.permission.PROCESS_OUTGOING_CALLS",
-                    "android.permission.BODY_SENSORS",
-                    "android.permission.SEND_SMS",
-                    "android.permission.RECEIVE_SMS",
-                    "android.permission.READ_SMS",
-                    "android.permission.RECEIVE_WAP_PUSH",
-                    "android.permission.RECEIVE_MMS",
-                    "android.permission.READ_EXTERNAL_STORAGE",
-                    "android.permission.WRITE_EXTERNAL_STORAGE",
-                    "android.permission.MOUNT_UNMOUNT_FILESYSTEMS",
-                    "android.permission.READ_HISTORY_BOOKMARKS",
-                    "android.permission.WRITE_HISTORY_BOOKMARKS",
-                    "android.permission.INSTALL_PACKAGES",
-                    "android.permission.RECEIVE_BOOT_COMPLETED",
-                    "android.permission.READ_LOGS",
-                    "android.permission.CHANGE_WIFI_STATE",
-                    "android.permission.DISABLE_KEYGUARD",
-                    "android.permission.GET_TASKS",
-                    "android.permission.BLUETOOTH",
-                    "android.permission.CHANGE_NETWORK_STATE",
-                    "android.permission.ACCESS_WIFI_STATE",
-                ]
-                if permission_name:
-                    if permission_name in dangerous_permission_list:
-                        permissions.append(permission_name)
+                if permission_name and permission_name in DANGEROUS_PERMISSIONS:
+                    permissions.append(permission_name)
             return permissions
         except Exception as e:
             util.mod_log(
