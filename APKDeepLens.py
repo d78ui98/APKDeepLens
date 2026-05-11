@@ -7,6 +7,7 @@ import argparse
 import time
 import xml.etree.ElementTree as ET
 from static_tools import sensitive_info_extractor, scan_android_manifest
+from static_tools.code_scanner import CodeScanner
 from report_gen import ReportGen, util
 
 """
@@ -36,11 +37,80 @@ class util(util):
         print(color + formatted_message + util.ENDC)
 
     @staticmethod
+    def print_summary(results_dict):
+        """Print a colour-coded summary table after scanning completes."""
+        SEVS      = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+        SEV_COLOR = {
+            "CRITICAL": util.FAIL,
+            "HIGH":     util.WARNING,
+            "MEDIUM":   util.OKCYAN,
+            "LOW":      "",
+            "INFO":     "",
+        }
+
+        def count_by_sev(findings):
+            counts = {s: 0 for s in SEVS}
+            for f in (findings or []):
+                sev = f.get("severity", "INFO")
+                if sev in counts:
+                    counts[sev] += 1
+            return counts
+
+        manifest_counts = count_by_sev(results_dict.get("manifest_security", []))
+        code_counts     = count_by_sev(results_dict.get("code_findings", []))
+        n_secrets  = len(results_dict.get("hardcoded_secrets") or [])
+        n_insecure = len(results_dict.get("insecure_requests") or [])
+        n_danger   = len(results_dict.get("dangerous_permission") or [])
+
+        cat_w    = 30
+        col_keys = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO", "TOTAL"]
+        col_w    = {"CRITICAL": 10, "HIGH": 6, "MEDIUM": 8, "LOW": 5, "INFO": 6, "TOTAL": 7}
+
+        sep = (
+            "+" + "-" * (cat_w + 2) + "+"
+            + "+".join("-" * (col_w[k] + 2) for k in col_keys)
+            + "+"
+        )
+
+        def fmt(val, w, color=""):
+            s = str(val).center(w)
+            return (" " + color + s + util.ENDC + " ") if color else (" " + s + " ")
+
+        def header_row():
+            cells = [fmt(k, col_w[k]) for k in col_keys]
+            return "| " + "Category".ljust(cat_w) + " |" + "|".join(cells) + "|"
+
+        def data_row(label, counts):
+            total = sum(counts.values())
+            cells = [fmt(counts[k], col_w[k], SEV_COLOR.get(k, "")) for k in col_keys[:-1]]
+            cells.append(fmt(total, col_w["TOTAL"], util.BOLD))
+            return "| " + label.ljust(cat_w) + " |" + "|".join(cells) + "|"
+
+        def count_row(label, count):
+            inner = len(sep) - 4
+            content = f"{label}: {count} total"
+            return "| " + content.ljust(inner) + " |"
+
+        print()
+        print(util.BOLD + "  Scan Summary" + util.ENDC)
+        print("  " + sep)
+        print("  " + header_row())
+        print("  " + sep)
+        print("  " + data_row("Manifest Security", manifest_counts))
+        print("  " + data_row("Code Findings", code_counts))
+        print("  " + sep)
+        print("  " + count_row("Hardcoded Secrets", n_secrets))
+        print("  " + count_row("Insecure URLs", n_insecure))
+        print("  " + count_row("Dangerous Permissions", n_danger))
+        print("  " + sep)
+        print()
+
+    @staticmethod
     def print_logo():
         """
         Logo for APKDeepLens
         """
-        logo = f"""                 
+        logo = f"""
 {util.OKGREEN} ████  █████  ██  ██    ( )                  (_ )                           {util.ENDC}
 {util.OKGREEN}██  ██ ██  ██ ██ ██    _| |  __     __  _ _   | |     __    ___    ___      {util.ENDC}
 {util.OKGREEN}██████ █████  ████   /'_` | /'_`\\ /'_`\\( '_`\\ | |    /'_`\\/' _ `\\/',__)     {util.ENDC}
@@ -260,8 +330,10 @@ if __name__ == "__main__":
             "permission": "",
             "dangerous_permission": "",
             "manifest_analysis": "",
+            "manifest_security": [],
             "hardcoded_secrets": "",
             "insecure_requests": "",
+            "code_findings": [],
         }
 
         # Creating object for autoapkscanner class
@@ -298,6 +370,7 @@ if __name__ == "__main__":
         results_dict["package_name"] = manifest_results["package_name"]
         results_dict["permission"] = manifest_results["permissions"]
         results_dict["dangerous_permission"] = manifest_results["dangerous_permission"]
+        results_dict["manifest_security"] = manifest_results.get("manifest_security", [])
         results_dict["manifest_analysis"] = {
             "activities": {
                 "all": manifest_results["activities"],
@@ -335,11 +408,20 @@ if __name__ == "__main__":
         util.mod_log("[+] Extracting all insecure connections ", util.OKCYAN)
         all_file_path = obj.get_all_file_paths(extracted_apk_path)
         result = obj.extract_insecure_request_protocol(all_file_path)
-        print(result)
         if isinstance(result, list):
             results_dict["insecure_requests"] = result
         else:
             results_dict["insecure_requests"] = []
+
+        # Deep code security scan
+        util.mod_log("[+] Running deep code security scan", util.OKCYAN)
+        scanner = CodeScanner(extracted_apk_path)
+        code_findings = scanner.scan_all()
+        results_dict["code_findings"] = code_findings
+        util.mod_log(
+            f"[+] Code scan complete: {len(code_findings)} finding(s)", util.OKGREEN
+        )
+        util.print_summary(results_dict)
 
         ############## REPORT GENERATION ############
 
@@ -372,9 +454,9 @@ if __name__ == "__main__":
             obj = ReportGen(apk_name, manifest, res_path, source_path, template_path, out_path)
 
             if args.report == "html":
-                obj.generate_html_pdf_report(report_type="html")
+                obj.generate_html_pdf_report(report_type="html", results_dict=results_dict)
             elif args.report == "pdf":
-                obj.generate_html_pdf_report(report_type="pdf")
+                obj.generate_html_pdf_report(report_type="pdf", results_dict=results_dict)
             elif args.report == "json":
                 obj.generate_json_report(results_dict)
             elif args.report == "txt":

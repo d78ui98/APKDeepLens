@@ -48,6 +48,32 @@
             margin-left: 150px;
             border: 1px solid #000;
         }
+        .findings-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .findings-table th, .findings-table td {
+            border: 1px solid #ccc;
+            padding: 6px 8px;
+            vertical-align: top;
+            text-align: left;
+        }
+        .findings-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        .findings-table code {
+            font-family: monospace;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+        .sev-critical { color: #c00; font-weight: bold; }
+        .sev-high     { color: #e55; font-weight: bold; }
+        .sev-medium   { color: #e90; }
+        .sev-low      { color: #555; }
+        .sev-info     { color: #aaa; }
     </style>
 </head>
 
@@ -77,6 +103,22 @@
         <h1>Dangerous Permissions</h1>
         <div id="infos">
             <div>{{ dangerous_permission }}</div>
+        </div>
+    </div>
+    <hr />
+
+    <div class="heading heading1">
+        <h1>Manifest Security Issues</h1>
+        <div id="infos">
+            <div>{{ manifest_security_html }}</div>
+        </div>
+    </div>
+    <hr />
+
+    <div class="heading heading1">
+        <h1>Code Security Findings</h1>
+        <div id="infos">
+            <div>{{ code_findings_html }}</div>
         </div>
     </div>
     <hr />
