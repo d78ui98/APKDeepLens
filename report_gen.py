@@ -330,8 +330,87 @@ class ReportGen(object):
             f"[+] Generated JSON report - {json_report_path}", util.OKCYAN
         )
 
+    # ------------------------------------------------------------------
+    # New finding renderers
+    # ------------------------------------------------------------------
+
+    _SEV_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    _SEV_CLASS = {
+        "CRITICAL": "sev-critical",
+        "HIGH":     "sev-high",
+        "MEDIUM":   "sev-medium",
+        "LOW":      "sev-low",
+        "INFO":     "sev-info",
+    }
+
+    def findings_to_html(self, findings: list) -> str:
+        """Render code findings (with file + line) as an HTML table."""
+        if not findings:
+            return "<p>No findings.</p>"
+        sorted_findings = sorted(findings, key=lambda f: self._SEV_ORDER.get(f.get("severity", "INFO"), 99))
+        rows = []
+        for f in sorted_findings:
+            sev = html_module.escape(f.get("severity", ""))
+            cls = self._SEV_CLASS.get(f.get("severity", "INFO"), "sev-info")
+            fid    = html_module.escape(f.get("id", ""))
+            title  = html_module.escape(f.get("title", ""))
+            owasp  = html_module.escape(f.get("owasp", ""))
+            desc   = html_module.escape(f.get("description", ""))
+            ffile  = html_module.escape(f.get("file", ""))
+            line   = html_module.escape(str(f.get("line", "")))
+            evid   = html_module.escape(f.get("evidence", ""))
+            rows.append(
+                f'<tr>'
+                f'<td><span class="{cls}">{sev}</span></td>'
+                f'<td><b>{fid}</b><br/>{title}</td>'
+                f'<td>{owasp}</td>'
+                f'<td>{desc}</td>'
+                f'<td><code>{ffile}:{line}</code><br/><code>{evid}</code></td>'
+                f'</tr>'
+            )
+        header = (
+            '<table class="findings-table">'
+            '<thead><tr>'
+            '<th>Severity</th><th>ID / Title</th><th>OWASP</th>'
+            '<th>Description</th><th>Location / Evidence</th>'
+            '</tr></thead><tbody>'
+        )
+        return header + "".join(rows) + "</tbody></table>"
+
+    def manifest_findings_to_html(self, findings: list) -> str:
+        """Render manifest findings (no file/line) as an HTML table."""
+        if not findings:
+            return "<p>No manifest security issues found.</p>"
+        sorted_findings = sorted(findings, key=lambda f: self._SEV_ORDER.get(f.get("severity", "INFO"), 99))
+        rows = []
+        for f in sorted_findings:
+            sev   = html_module.escape(f.get("severity", ""))
+            cls   = self._SEV_CLASS.get(f.get("severity", "INFO"), "sev-info")
+            fid   = html_module.escape(f.get("id", ""))
+            title = html_module.escape(f.get("title", ""))
+            owasp = html_module.escape(f.get("owasp", ""))
+            desc  = html_module.escape(f.get("description", ""))
+            evid  = html_module.escape(f.get("evidence", ""))
+            rows.append(
+                f'<tr>'
+                f'<td><span class="{cls}">{sev}</span></td>'
+                f'<td><b>{fid}</b><br/>{title}</td>'
+                f'<td>{owasp}</td>'
+                f'<td>{desc}</td>'
+                f'<td><code>{evid}</code></td>'
+                f'</tr>'
+            )
+        header = (
+            '<table class="findings-table">'
+            '<thead><tr>'
+            '<th>Severity</th><th>ID / Title</th><th>OWASP</th>'
+            '<th>Description</th><th>Evidence</th>'
+            '</tr></thead><tbody>'
+        )
+        return header + "".join(rows) + "</tbody></table>"
+
     def create_obj_for_report(
-        self, txt_output: bool = False
+        self, txt_output: bool = False, results_dict: dict = None
     ):
         manifest = self.manifest
         res_path = self.res_path
@@ -357,7 +436,18 @@ class ReportGen(object):
         html_dict["external_storage_grep"] = obj.grep_keyword(
             "external_storage", txt_output
         )
-        # print(html_dict)
+
+        if results_dict:
+            html_dict["manifest_security_html"] = obj.manifest_findings_to_html(
+                results_dict.get("manifest_security", [])
+            )
+            html_dict["code_findings_html"] = obj.findings_to_html(
+                results_dict.get("code_findings", [])
+            )
+        else:
+            html_dict["manifest_security_html"] = "<p>No data (pass results_dict to enable).</p>"
+            html_dict["code_findings_html"] = "<p>No data (pass results_dict to enable).</p>"
+
         return obj, html_dict
 
     def generate_txt_report(self, result_dict: dict):
@@ -416,42 +506,64 @@ class ReportGen(object):
             result += "\nExternal storage:\n"
             result += html_dict["external_storage_grep"]
 
+            # Manifest security findings
+            result += "\n\nManifest Security Issues:\n"
+            manifest_sec = result_dict.get("manifest_security", [])
+            if not manifest_sec:
+                result += "  No manifest security issues found.\n"
+            else:
+                for f in sorted(manifest_sec, key=lambda x: self._SEV_ORDER.get(x.get("severity", "INFO"), 99)):
+                    result += f"  [{f.get('severity','?')}] {f.get('id','')} — {f.get('title','')}\n"
+                    result += f"    OWASP: {f.get('owasp','')}\n"
+                    result += f"    Evidence: {f.get('evidence','')}\n"
+                    result += f"    {f.get('description','')}\n\n"
+
+            # Code security findings
+            result += "\nCode Security Findings:\n"
+            code_findings = result_dict.get("code_findings", [])
+            if not code_findings:
+                result += "  No code security findings.\n"
+            else:
+                for f in code_findings:  # already sorted by severity from CodeScanner
+                    result += f"  [{f.get('severity','?')}] {f.get('id','')} — {f.get('title','')}\n"
+                    result += f"    OWASP: {f.get('owasp','')}\n"
+                    result += f"    File:  {f.get('file','')}:{f.get('line','')}\n"
+                    result += f"    Code:  {f.get('evidence','')}\n"
+                    result += f"    {f.get('description','')}\n\n"
+
             # Saving the report
             cleaned_apk_name = obj.clean_apk_name(self.apk_name)
 
-            if not os.path.isfile(self.out_path):
-                txt_report_path = os.path.join(self.out_path, f"report_{cleaned_apk_name}.txt")
-            else:
+            if os.path.isfile(self.out_path):
                 txt_report_path = self.out_path
-            if not os.path.exists(txt_report_path):
-                os.makedirs(
-                    os.path.dirname(txt_report_path), exist_ok=True
-                )
+            else:
+                reports_dir = os.path.join(self.out_path, 'reports')
+                os.makedirs(reports_dir, exist_ok=True)
+                txt_report_path = os.path.join(reports_dir, f"report_{cleaned_apk_name}.txt")
             with open(txt_report_path, "w", encoding="utf-8") as f:
                 f.write(result)
             util.mod_print(f"[+] Generated TXT report - {txt_report_path}", util.OKCYAN)
         except Exception as e:
             util.mod_print(f"[-] {str(e)}", util.FAIL)
 
-    def generate_html_pdf_report(self, report_type):
+    def generate_html_pdf_report(self, report_type, results_dict: dict = None):
         """
-        This the function generates an html and pdf report using functions mentioned in report_gen.py
+        Generates an HTML (and optionally PDF) report.
+        Pass results_dict to include manifest_security and code_findings sections.
         """
 
         try:
             # Creating object for report generation module.
-            obj, html_dict = self.create_obj_for_report()
+            obj, html_dict = self.create_obj_for_report(results_dict=results_dict)
 
             # Ensure reports directory exists
             cleaned_apk_name = obj.clean_apk_name(self.apk_name)
-            if not os.path.isfile(self.out_path):
-                html_report_path = os.path.join(self.out_path, f"report_{cleaned_apk_name}.html")
-            else:
+            if os.path.isfile(self.out_path):
                 html_report_path = self.out_path
-            if not os.path.exists(html_report_path):
-                os.makedirs(
-                    os.path.dirname(html_report_path), exist_ok=True
-                )
+            else:
+                reports_dir = os.path.join(self.out_path, 'reports')
+                os.makedirs(reports_dir, exist_ok=True)
+                html_report_path = os.path.join(reports_dir, f"report_{cleaned_apk_name}.html")
 
             # Generating the html report
             report_content = obj.render_template("report_template.html", html_dict)
