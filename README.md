@@ -168,6 +168,5 @@ Feature requests, bug reports, and pull requests are welcome at [github.com/d78u
 
 - Black Hat MEA 2023 — [APKaleidoscope: Android Security Insights in Full Spectrum](https://blackhatmea.com/session/apkaleidoscope-android-security-insights-full-spectrum-0)
 - Black Hat ASIA 2024 — [APKDeepLens: Android Security Insights in Full Spectrum](https://www.blackhat.com/asia-24/arsenal/schedule/index.html#apkdeeplens---android-security-insights-in-full-spectrum-37182)
-- Black Hat MEA 2024 — [APKDeepLens: Android Security Insights in Full Spectrum](https://attend.blackh
-atevents.virtual.informatech.com/event/black-hat-mea-2024/planning/UGxhbm5pbmdfMjE5Nzg5OA==)
+- Black Hat MEA 2024 — [APKDeepLens: Android Security Insights in Full Spectrum](https://attend.blackhatevents.virtual.informatech.com/event/black-hat-mea-2024/planning/UGxhbm5pbmdfMjE5Nzg5OA==)
 - GISEC Global Dubai 2024 — APKDeepLens: Android Security Insights in Full Spectrum
